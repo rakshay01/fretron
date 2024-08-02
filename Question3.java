@@ -1,92 +1,94 @@
 import java.util.*;
 
-public class Question3 {
+public class Question1 {
 
-    private static final int BOARD_SIZE = 10;
+    private static final int SIZE = 10;
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+        Scanner in = new Scanner(System.in);
 
         System.out.print("Enter the number of soldiers: ");
-        int numSoldiers = scanner.nextInt();
+        int numSoldiers = in.nextInt();
+        in.nextLine();  // consume the newline
 
-        Set<Coordinate> soldiers = new HashSet<>();
+        Set<Pos> soldiers = new HashSet<>();
         for (int i = 0; i < numSoldiers; i++) {
             System.out.print("Enter coordinates for soldier " + (i + 1) + ": ");
-            int x = scanner.nextInt();
-            int y = scanner.nextInt();
-            soldiers.add(new Coordinate(x, y));
+            String[] coords = in.nextLine().split(",");
+            int x = Integer.parseInt(coords[0].trim());
+            int y = Integer.parseInt(coords[1].trim());
+            soldiers.add(new Pos(x, y));
         }
 
         System.out.print("Enter the coordinates for your “special” castle: ");
-        int castleX = scanner.nextInt();
-        int castleY = scanner.nextInt();
-        Coordinate castle = new Coordinate(castleX, castleY);
+        String[] castleCoords = in.nextLine().split(",");
+        int cx = Integer.parseInt(castleCoords[0].trim());
+        int cy = Integer.parseInt(castleCoords[1].trim());
+        Pos castle = new Pos(cx, cy);
 
-        List<List<Move>> paths = findPaths(castle, soldiers);
+        List<List<Step>> paths = getPaths(castle, soldiers);
 
         System.out.println("\nThanks. There are " + paths.size() + " unique paths for your ‘special_castle’\n");
 
-        for (int idx = 0; idx < paths.size(); idx++) {
-            System.out.println("Path " + (idx + 1) + ":\n" + "=".repeat(7));
+        for (int i = 0; i < paths.size(); i++) {
+            System.out.println("Path " + (i + 1) + ":\n" + "=".repeat(7));
             System.out.println("Start: " + castle);
-            for (Move move : paths.get(idx)) {
-                System.out.println("Kill " + move.coordinate + ". Turn " + move.direction);
+            for (Step step : paths.get(i)) {
+                System.out.println("Kill " + step.pos + ". Turn " + step.dir);
             }
             System.out.println("Arrive " + castle + "\n");
         }
-        scanner.close();
+        in.close();
     }
 
-    private static List<List<Move>> findPaths(Coordinate castle, Set<Coordinate> soldiers) {
-        List<List<Move>> pathHistory = new ArrayList<>();
-        move(castle, soldiers, 'R', new ArrayList<>(), pathHistory, castle);
-        return pathHistory;
+    private static List<List<Step>> getPaths(Pos castle, Set<Pos> soldiers) {
+        List<List<Step>> allPaths = new ArrayList<>();
+        findPath(castle, soldiers, 'R', new ArrayList<>(), allPaths, castle);
+        return allPaths;
     }
 
-    private static void move(Coordinate position, Set<Coordinate> soldiers, char direction,
-                             List<Move> path, List<List<Move>> pathHistory, Coordinate castle) {
-        int[][] deltas = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+    private static void findPath(Pos pos, Set<Pos> soldiers, char dir, List<Step> path, List<List<Step>> allPaths, Pos castle) {
+        int[][] moves = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
         char[] directions = {'R', 'D', 'L', 'U'};
-        Map<Character, Integer> directionMap = Map.of('R', 0, 'D', 1, 'L', 2, 'U', 3);
+        Map<Character, Integer> dirMap = Map.of('R', 0, 'D', 1, 'L', 2, 'U', 3);
 
-        int x = position.x, y = position.y;
-        int dx = deltas[directionMap.get(direction)][0];
-        int dy = deltas[directionMap.get(direction)][1];
+        int x = pos.x, y = pos.y;
+        int dx = moves[dirMap.get(dir)][0];
+        int dy = moves[dirMap.get(dir)][1];
 
-        while (0 <= x + dx && x + dx < BOARD_SIZE && 0 <= y + dy && y + dy < BOARD_SIZE) {
+        while (0 <= x + dx && x + dx < SIZE && 0 <= y + dy && y + dy < SIZE) {
             x += dx;
             y += dy;
-            Coordinate nextPosition = new Coordinate(x, y);
+            Pos newPos = new Pos(x, y);
 
-            if (soldiers.contains(nextPosition)) {
-                Set<Coordinate> newSoldiers = new HashSet<>(soldiers);
-                newSoldiers.remove(nextPosition);
-                List<Move> newPath = new ArrayList<>(path);
-                newPath.add(new Move(nextPosition, direction));
-                pathHistory.add(newPath);
+            if (soldiers.contains(newPos)) {
+                Set<Pos> newSoldiers = new HashSet<>(soldiers);
+                newSoldiers.remove(newPos);
+                List<Step> newPath = new ArrayList<>(path);
+                newPath.add(new Step(newPos, dir));
+                allPaths.add(newPath);
 
                 // Handle jumps
-                while (0 <= x + dx && x + dx < BOARD_SIZE && 0 <= y + dy && y + dy < BOARD_SIZE) {
+                while (0 <= x + dx && x + dx < SIZE && 0 <= y + dy && y + dy < SIZE) {
                     x += dx;
                     y += dy;
-                    if (soldiers.contains(new Coordinate(x, y))) break;
+                    if (soldiers.contains(new Pos(x, y))) break;
                 }
 
-                char nextDirection = directions[(directionMap.get(direction) + 1) % 4];
-                move(new Coordinate(x, y), newSoldiers, nextDirection, newPath, pathHistory, castle);
+                char nextDir = directions[(dirMap.get(dir) + 1) % 4];
+                findPath(new Pos(x, y), newSoldiers, nextDir, newPath, allPaths, castle);
             }
-            if (nextPosition.equals(castle)) {
+            if (newPos.equals(castle)) {
                 return;
             }
         }
     }
 }
 
-class Coordinate {
+class Pos {
     int x, y;
 
-    Coordinate(int x, int y) {
+    Pos(int x, int y) {
         this.x = x;
         this.y = y;
     }
@@ -95,8 +97,8 @@ class Coordinate {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Coordinate that = (Coordinate) o;
-        return x == that.x && y == that.y;
+        Pos pos = (Pos) o;
+        return x == pos.x && y == pos.y;
     }
 
     @Override
@@ -110,12 +112,12 @@ class Coordinate {
     }
 }
 
-class Move {
-    Coordinate coordinate;
-    char direction;
+class Step {
+    Pos pos;
+    char dir;
 
-    Move(Coordinate coordinate, char direction) {
-        this.coordinate = coordinate;
-        this.direction = direction;
+    Step(Pos pos, char dir) {
+        this.pos = pos;
+        this.dir = dir;
     }
 }
